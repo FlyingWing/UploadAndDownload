@@ -1,0 +1,187 @@
+package client;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+public class Client {
+	public static void main(String args[])
+	{
+		
+		String hostName = null;
+		int port = -1;
+		String local_filename = null;
+		String remote_filename = null;
+		Socket socket = null;
+		byte[] bbuf = new byte[10*1024];
+		try {			
+			System.out.println("*******************************help*****************************************");
+			System.out.println("* 上传文件请输入：put [-h hostname] [-p portname] local_filename remote_filename *");
+			System.out.println("* 下载文件请输入：get [-h hostname] [-p portname] remote_filename local_filename *");			
+			System.out.println("*****************************************************************************");
+			System.out.println("***********************输入的文件路径不要含有空格*************************************");
+			System.out.println("*****************************************************************************");
+			System.out.print("请输入：");
+			
+			BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+			String line = br.readLine();
+			br.close();
+			String lineToken[] = line.split(" |\t");
+			if(lineToken[0].equals("put"))
+			{
+				System.out.println("开始上传文件。。。");
+				//上传文件
+				if(lineToken[1].equals("-h"))
+				{
+					hostName = lineToken[2];
+				}
+				else if(lineToken[1].equals("-p"))
+				{
+					port = Integer.parseInt(lineToken[2]);
+				}
+				else
+				{
+					throw new IllegalArgumentException("参数输入错误");
+				}
+				
+				if(lineToken[3].equals("-h"))
+				{
+					hostName = lineToken[4];
+				}
+				else if(lineToken[3].equals("-p"))
+				{
+					port = Integer.parseInt(lineToken[4]);
+				}
+				else
+				{
+					throw new IllegalArgumentException("参数输入错误");
+				}
+				local_filename = lineToken[5];
+				remote_filename = lineToken[6];
+				
+				
+				socket = new Socket(hostName, port);
+				OutputStream os = socket.getOutputStream();
+				bbuf = "put".getBytes();
+				os.write(bbuf);
+				os.flush();
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				File file = new File(local_filename);
+				if(!file.exists())
+				{
+					throw new FileNotFoundException("local_filename does not exist");
+				}
+				bbuf = remote_filename.getBytes();
+				os.write(bbuf);
+				os.flush();
+				
+				FileInputStream fis = new FileInputStream(file);				
+				int hasRead =0;
+				while((hasRead = fis.read(bbuf)) != -1)
+				{
+					os.write(bbuf, 0, hasRead);
+					os.flush();
+
+				}
+				
+				socket.shutdownOutput();
+				os.close();
+				fis.close();		
+				System.out.println("文件上传完毕！！！");
+					
+			}
+			else if(lineToken[0].equals("get"))
+			{
+				//下载文件
+				if(lineToken[1].equals("-h"))
+				{
+					hostName = lineToken[2];
+				}
+				else if(lineToken[1].equals("-p"))
+				{
+					port = Integer.parseInt(lineToken[2]);
+				}
+				else
+				{
+					throw new IllegalArgumentException("参数输入错误");
+				}
+				
+				if(lineToken[3].equals("-h"))
+				{
+					hostName = lineToken[4];
+				}
+				else if(lineToken[3].equals("-p"))
+				{
+					port = Integer.parseInt(lineToken[4]);
+				}
+				else
+				{
+					throw new IllegalArgumentException("参数输入错误");
+				}
+				local_filename = lineToken[6];
+				remote_filename = lineToken[5];
+				
+				//建立连接
+				socket = new Socket(hostName, port);
+				OutputStream os = socket.getOutputStream();
+				bbuf = "get".getBytes();
+				System.out.println(bbuf.length);
+				os.write(bbuf);
+				os.flush();
+				try {
+					Thread.sleep(1000);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				//发送要下载的文件名
+				bbuf = remote_filename.getBytes();
+				os.write(bbuf);
+				os.flush();
+				socket.shutdownOutput();
+				
+				
+				InputStream is = socket.getInputStream();
+				FileOutputStream fos = new FileOutputStream(local_filename);
+				int hasRead = 0;
+				while((hasRead = is.read(bbuf))!=-1)
+				{
+					fos.write(bbuf, 0, hasRead);
+				}
+				socket.shutdownInput();	
+				is.close();
+				fos.close();
+				os.close();
+				System.out.println("文件下载完毕！！！");
+			}
+			else
+			{
+				throw new IllegalArgumentException("参数输入错误");
+			}	
+			socket.close();
+		} catch (UnknownHostException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+}
